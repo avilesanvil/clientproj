@@ -37,8 +37,8 @@ public class Server {
         ExecutorService pool = Executors.newFixedThreadPool(10);
 
         try (ServerSocket serverSocket = new ServerSocket(port, 50, InetAddress.getByName(ipAddress))) {
-            // Print the IP address and port to the console
-            System.out.println("Server is listening on IP: " + serverSocket.getInetAddress().getHostAddress() + " Port: " + serverSocket.getLocalPort());
+            // Print the IP address and port to the console (Displayed IP number is changed for demonstration purposes)
+            System.out.println("Server is listening on IP: 192.168.x.x Port: " + serverSocket.getLocalPort());
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -127,28 +127,48 @@ public class Server {
                         leaveChatRoom();
                     } else if ("LISTROOMS".equals(inputLine)) {
                         listChatRooms();
-                    } else {
+                    } else if ("EXIT".equals(inputLine)) {
+						if (currentRoom != null) {
+						leaveChatRoom();  // Leave the room if the client is in one
+					}
+					out.println("Exiting the server. Goodbye!");
+					closeResources();
+					break; // Break out of the loop to end this handler thread
+					} else {
                         sendMessageToChatRoom(clientName + ": " + inputLine, this.out);
-                    }
-                }
+					}
+				}
             } catch (IOException ex) {
                 System.out.println("Server exception: " + ex.getMessage());
                 ex.printStackTrace();
-            } finally {
-                leaveChatRoom();
-                closeResources();
-            }
+				
+			// The finally block is now only relevant if the while loop exits unexpectedly
+			} finally {
+				if (currentRoom != null) {
+					leaveChatRoom();  // Ensure to leave the room if still connected
+				}
+				out.println("SERVER_CLOSE_CONNECTION"); // Send disconnection message in the finally block as well
+				closeResources();  // Close resources when exiting the loop
+			}
         }
 
         private void joinChatRoom(String roomName) {
+			boolean isNewRoom = !chatRooms.containsKey(roomName); // Check if the room is new
 			leaveChatRoom(); // Leave the current room if any
 			ChatRoomHandler roomHandler = chatRooms.computeIfAbsent(roomName, k -> new ChatRoomHandler(roomName));
 			roomHandler.addClient(out);
 			currentRoom = roomName;
-			new Thread(roomHandler).start(); // Start the chat room handler thread if it's a new room
-			out.println("Entered room: " + roomName);
+			if(isNewRoom) {
+				Thread newRoomThread = new Thread(roomHandler);
+				newRoomThread.start(); // Start the chat room handler thread if it is a new room
+				System.out.println("New thread created for chat room: " + roomName + ", Thread ID: " + newRoomThread);
+			}
 			System.out.println(clientName + " has entered chat room: " + roomName);
+
+			// Send a message to the user indicating successful joining of the room
+			out.println("You have successfully joined the room: " + roomName);
 		}
+
 
 		private void leaveChatRoom() {
 			if (currentRoom != null) {
@@ -164,13 +184,16 @@ public class Server {
 
 
         private void listChatRooms() {
-			out.println("Available chat rooms:");
+			System.out.println("Listing chat rooms..."); // Debug statement
+			System.out.println("Available chat rooms:");
 			for (Map.Entry<String, ChatRoomHandler> entry : chatRooms.entrySet()) {
-			// Getting the number of clients in each chat room from the ChatRoomHandler instance
-			int numberOfUsers = entry.getValue().getNumberOfClients(); 
-			out.println(" - " + entry.getKey() + " (" + numberOfUsers + " users)");
+				// Debug statement to check each entry
+				System.out.println("Checking room: " + entry.getKey());
+				int numberOfUsers = entry.getValue().getNumberOfClients(); 
+				out.println(" - " + entry.getKey() + " (" + numberOfUsers + " users)");
 			}
 		}
+
 
 
         private void sendMessageToChatRoom(String message, PrintWriter senderOut) {
