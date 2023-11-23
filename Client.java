@@ -24,13 +24,13 @@ public class Client {
 
             System.out.println("Connected to server on " + serverIp + ":" + port);
 
-            // Thread to handle incoming messages from the server
+        // Thread to handle incoming messages from the server
 		new Thread(() -> {
 			try {
 				String serverMessage;
 				while ((serverMessage = in.readLine()) != null) {
 					if ("Exiting the server. Goodbye!".equals(serverMessage.trim())) {
-						break; // Break the loop to close client resources
+					break; // Break the loop to close client resources
 					}
 					System.out.println(serverMessage);
 				}
@@ -38,13 +38,17 @@ public class Client {
 				System.err.println("Error reading from server: " + e.getMessage());
 				e.printStackTrace();
 			} finally {
-				out.close();
-				in.close();
-				socket.close();
+				try {
+					if (out != null) out.close();
+					if (in != null) in.close();
+					if (socket != null) socket.close();
+				} catch (IOException e) {
+					System.err.println("Error closing resources: " + e.getMessage());
+					e.printStackTrace();
+				}		
 				System.exit(0); // Exit the program
 			}
 		}).start();
-
 
             // Handling user input and sending to the server
             String userInput;
