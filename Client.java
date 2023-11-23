@@ -29,7 +29,10 @@ public class Client {
                 try {
                     String serverMessage;
                     while ((serverMessage = in.readLine()) != null) {
-                        System.out.println(serverMessage);
+                        if ("SERVER_CLOSE_CONNECTION".equals(serverMessage.trim())) {
+							break; // Stop reading from the server
+						}
+						System.out.println(serverMessage);
                     }
                 } catch (IOException e) {
                     System.err.println("Error reading from server: " + e.getMessage());
@@ -42,10 +45,6 @@ public class Client {
             while ((userInput = stdIn.readLine()) != null) {
                 out.println(userInput);
                 
-                // Check if the user is leaving the chat room
-                if ("LEAVE".equalsIgnoreCase(userInput.trim())) {
-                    break; // Exit the loop and close the client
-                }
             }
         } catch (UnknownHostException ex) {
             System.err.println("Host unknown: " + ex.getMessage());
